@@ -8,38 +8,51 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import os
 
+#   for lines that are pretty self-explanatory, comments are unnecessary,
+#   especially when variable names can do the work for you; for example,
+#
+#       last_height = driver.execute_script("return document.body.scrollHeight")
+#
+#   as pointed out below can become
+#
+#       last_height = driver.execute_script(GET_SCROLL_HEIGHT)
+#
+#   which says in the variable name what it does - the driver executes a script
+#   that gets the scroll height and stores it in the last_height variable.
+#
+#   generally, other programmers will prefer code that uses clear variable and function
+#   names to communicate over code that has a comment above each line explaining what it does,
+#   and save comments for complicated or unintuitive code.
+
+# see comment on line 51 about file paths
 driver_path = '/Users/Admin/Desktop/chromedriver/chromedriver.exe'
 driver = webdriver.Chrome(executable_path=driver_path)
 
 # infinite scroll function from https://dev.to/hellomrspaceman/python-selenium-infinite-scrolling-3o12
-def scroll(driver, timeout):
-    scroll_pause_time = timeout
+# including the link where you got the code is extremely good and I wish my coworkers did it more
+# to rename an argument to a function, just change the name of the argument
+def scroll(driver, scroll_pause_time):
 
-    # Get scroll height
-    last_height = driver.execute_script("return document.body.scrollHeight")
+    # it's a best practice to extract repeated constants into variables, so changing the value here
+    # automatically propagates to everywhere in the program
+    GET_SCROLL_HEIGHT = "return document.body.scrollHeight;"
+    SCROLL_TO_BOTTOM = "window.scrollTo(0, document.body.scrollHeight);"
 
-    while True:
-        # Scroll down to bottom
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    new_height = 0
+    last_height = driver.execute_script(GET_SCROLL_HEIGHT)
 
-        # Wait to load page
-        time.sleep(scroll_pause_time)
-
-        # Calculate new scroll height and compare with last scroll height
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
-            # If heights are the same it will exit the function
-            break
+    # it's more idiomatic to check the condition at the top of the loop, instead of using `while True` and `break`
+    while new_height != last_height:
         last_height = new_height
+        driver.execute_script(SCROLL_TO_BOTTOM)
+        time.sleep(scroll_pause_time)
+        new_height = driver.execute_script(GET_SCROLL_HEIGHT)
 
-
-# load csv w/ urls
+# if this script needed to be executed by others, it would be best to
+# 1. commit the CSV file, or an example of a valid file, into the repo, and
+# 2. use a relative path, like "./facebook_pages_to_watch.csv", to get it from the same folder where the script is running
+# if the script needed to be used with other CSVs, you could use argparse to take in the filepath as an argument to the script
 urls = pd.read_csv("/Users/Admin/Documents/adscraper/facebook_pages_to_watch.csv")
-#urls = pd.read_csv("/Users/Admin/Documents/adscraper/testing_lol.csv")
-
-
-
-# loop through URLs
 
 run_time = datetime.now().strftime("%m-%d-%Y %H.%M.%S")
 
@@ -55,7 +68,7 @@ for ind in urls.index:
     scroll(driver, 4)
 
     # open html in beautiful soup
-    soup=BeautifulSoup(driver.page_source, 'lxml')
+    soup = BeautifulSoup(driver.page_source, 'lxml')
     scraped_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     adlist = soup.find_all(class_='_7owt')
@@ -95,18 +108,4 @@ for ind in urls.index:
                             run_time,"/",site_name]))
     adtable.to_csv("".join(["/Users/Admin/Documents/adscraper/data/",
                             run_time,"/",site_name,"/data.csv"]))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    
